@@ -35,27 +35,46 @@ public class LogEvent implements RequestHandler<SNSEvent, Object> {
         String to_mail = request.getRecords().get(0).getSNS().getMessage();
 
         String token = UUID.randomUUID().toString();
-        String from_mail = "patro.a@northeastern.edu";
+        String from_mail = "noreply@prod.ankitpatro.me";
         String subject = "Forgot Password Link";
+       String link = "http://ankitpatro.me/reset?email=" + to_mail + "&token=" + token;
 
-        Table table = dynamoDB.getTable("snslambda_table");// update to tokenHolder
+        Table table = dynamoDB.getTable("snslambda");// update to tokenHolder
         Item item = table.getItem("username", to_mail); // update to username
         if (item == null) {
-            item = new Item().withPrimaryKey("username", to_mail).with("token", token).with("ttl",
-                    ((System.currentTimeMillis() / 1000 + 900))); // update to username and token with ttl of 30 mins
-
-            PutItemOutcome outcome = table.putItem(item);
-
-            context.getLogger().log("Put successful: " + outcome.toString());
+            context.getLogger().log("item is null");
+            putItemInDynamo(context, to_mail, token, table);
+            sendEmail(context, to_mail, from_mail, subject, link);
 
         } else {
 
-            context.getLogger().log("This record is already present in db");
+
+            long ttlTime = (Long.parseLong(item.get("ttl").toString()));
+            context.getLogger().log("ttlTime : "+ ttlTime);
+            context.getLogger().log("difference between current time and ttl time"+ String.valueOf(ttlTime*1000-System.currentTimeMillis()));
+            if(System.currentTimeMillis()>ttlTime*1000)
+            {
+
+                context.getLogger().log("item is not null and token is expired");
+                putItemInDynamo(context, to_mail, token, table);
+                sendEmail(context, to_mail, from_mail, subject, link);
+
+            }
+
+
+            context.getLogger().log("This record is already present in db and within ttl");
 
             return null;
 
         }
-        String link = "http://ankitpatro.me/reset?email=" + to_mail + "&token=" + token;
+
+
+
+       context.getLogger().log("Invocation completed: " + timeStamp);
+        return null;
+    }
+
+    private void sendEmail(Context context, String to_mail, String from_mail, String subject, String link) {
         try {
             AmazonSimpleEmailService client = AmazonSimpleEmailServiceClientBuilder.standard()
                     .withRegion(Regions.US_EAST_1).build();
@@ -73,7 +92,16 @@ public class LogEvent implements RequestHandler<SNSEvent, Object> {
         } catch (Exception e) {
             context.getLogger().log("Exception : " + e.getMessage());
         }
-        context.getLogger().log("Invocation completed: " + timeStamp);
-        return null;
+    }
+
+    private void putItemInDynamo(Context context, String to_mail, String token, Table table) {
+        context.getLogger().log("putItemInDynamo called");
+        Item item;
+        item = new Item().withPrimaryKey("username", to_mail).with("token", token).with("ttl",
+                ((System.currentTimeMillis() / 1000 + 900))); // update to username and token with ttl of 15 mins
+
+        PutItemOutcome outcome = table.putItem(item);
+
+        context.getLogger().log("Put successful: " + outcome.toString());
     }
 }
