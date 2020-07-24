@@ -35,7 +35,7 @@ public class LogEvent implements RequestHandler<SNSEvent, Object> {
         String to_mail = request.getRecords().get(0).getSNS().getMessage();
 
         String token = UUID.randomUUID().toString();
-        String from_mail = "noreply@prod.ankitpatro.me";
+        String from_mail = "forgotPassword@prod.ankitpatro.me";
         String subject = "Forgot Password Link";
        String link = "http://ankitpatro.me/reset?email=" + to_mail + "&token=" + token;
 
