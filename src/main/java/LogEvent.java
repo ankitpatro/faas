@@ -39,12 +39,16 @@ public class LogEvent implements RequestHandler<SNSEvent, Object> {
         String subject = "Forgot Password Link";
        String link = "http://ankitpatro.me/reset?email=" + to_mail + "&token=" + token;
 
+       // The HTML body for the email.
+       String HTMLBODY = "<h1>"+link+"</h1>";
+
+
         Table table = dynamoDB.getTable("snslambda");// update to tokenHolder
         Item item = table.getItem("username", to_mail); // update to username
         if (item == null) {
             context.getLogger().log("item is null");
             putItemInDynamo(context, to_mail, token, table);
-            sendEmail(context, to_mail, from_mail, subject, link);
+            sendEmail(context, to_mail, from_mail, subject, link, HTMLBODY);
 
         } else {
 
@@ -57,7 +61,7 @@ public class LogEvent implements RequestHandler<SNSEvent, Object> {
 
                 context.getLogger().log("item is not null and token is expired");
                 putItemInDynamo(context, to_mail, token, table);
-                sendEmail(context, to_mail, from_mail, subject, link);
+                sendEmail(context, to_mail, from_mail, subject, link, HTMLBODY);
 
             }
 
@@ -74,15 +78,21 @@ public class LogEvent implements RequestHandler<SNSEvent, Object> {
         return null;
     }
 
-    private void sendEmail(Context context, String to_mail, String from_mail, String subject, String link) {
+    private void sendEmail(Context context, String to_mail, String from_mail, String subject, String link, String htmlBody) {
         try {
             AmazonSimpleEmailService client = AmazonSimpleEmailServiceClientBuilder.standard()
                     .withRegion(Regions.US_EAST_1).build();
 
+//            SendEmailRequest emailRequest = new SendEmailRequest()
+//                    .withDestination(new Destination().withToAddresses(to_mail))
+//                    .withMessage(new Message()
+//                            .withBody(new Body().withText(new Content().withCharset("UTF-8").withData(link)))
+//                            .withSubject(new Content().withCharset("UTF-8").withData(subject)))
+//                    .withSource(from_mail);
             SendEmailRequest emailRequest = new SendEmailRequest()
                     .withDestination(new Destination().withToAddresses(to_mail))
                     .withMessage(new Message()
-                            .withBody(new Body().withText(new Content().withCharset("UTF-8").withData(link)))
+                            .withBody(new Body().withHtml(new Content().withCharset("UTF-8").withData(htmlBody)))
                             .withSubject(new Content().withCharset("UTF-8").withData(subject)))
                     .withSource(from_mail);
             SendEmailResult result = client.sendEmail(emailRequest);
