@@ -40,8 +40,8 @@ public class LogEvent implements RequestHandler<SNSEvent, Object> {
        String link = "http://ankitpatro.me/reset?email=" + to_mail + "&token=" + token;
 
        // The HTML body for the email.
-       String HTMLBODY = "<h1>"+link+"</h1>";
 
+       String HTMLBODY = "<p><a href='console.aws.amazon.com/console/home'>" +link+ "</a></p>";
 
         Table table = dynamoDB.getTable("snslambda");// update to tokenHolder
         Item item = table.getItem("username", to_mail); // update to username
